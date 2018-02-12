@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function(ev){
+	function Target(first, second){
+		this.list = [first, second];
+		this.cat = "Felix";
+		this.dog = "Fido";
+		this.budgie = "Joey";
+	}
+	Target.prototype = Object.create(Object.prototype);
+	//Target.prototype.dog = "Fido";
+	Target.prototype.push = function(){
+		var retVal = this.list.push.apply(this.list, arguments)
+		console.log('push', this.list, retVal, arguments);
+		return retVal;
+	}
+	Target.prototype.constructor = Target;
+	Target.prototype.pop = function(){
+		var retVal = this.list.pop()
+		console.log('pop', this.list, retVal, arguments);
+		return retVal;
+	}
+	Target.prototype.slice = function(){
+		return new Target('kool', 'bool');
+		//return this.list;
+		//return this;
+	}
+	var el = document.getElementById('container')
+	console.log(el);
+	function deleteProperty(target, property){
+		console.log("Delete ", arguments);
+		return true;
+	}
+
+	var handler1 = {
+		proxify: function(output){
+			var base = new output.constructor();
+			var proxy = new Proxy(base, this);
+			Object.setPrototypeOf(output, proxy)
+		},
+		get: function(target, property, receiver){
+			var value = Reflect.get(target, property, receiver);
+			if(typeof value === 'function'){
+				var proxify = this.proxify.bind(this);
+				var retFunct = function(){
+					var output = value.apply(this, arguments);
+					console.log('output: ', output, typeof output);
+					if(typeof output === 'object'){
+						proxify(output);
+						return output;
+					}
+					return output;
+				}
+				return retFunct;
+
+			}
+			if(typeof value === 'undefined'){
+				if(this[property]){
+					return this[property];
+				}
+			}
+			return value;
+		},
+		set: function(target, property, value, receiver){
+			console.log('target ', target, ' set property ', property, ' value ', value, ' receiver ', receiver);
+			Reflect.set(target, property, value, receiver);
+			return true;
+		},
+		deleteProperty: function(target, name) {
+			console.log('in deleteProperty');
+			return true;
+		}
+	}
+
+
+	var base = new Target();
+	var target = new Target('boo', 'zoo');
+//	var target = ['boo', 'zoo'];
+	target.push('koo', 'boo', 'loo');
+	console.log('unproxied ', target, handler1);
+	delete target.budgie;
+	handler1.setListener = function(el){
+		console.log(el);
+	}
+	var proxy = new Proxy(base, handler1);
+	delete proxy.cat
+	Object.setPrototypeOf(target, proxy)
+	console.log('proxied', target);
+	var zoo = target.pop();
+	console.log('proxied pop: ',zoo, ' : ', target);
+
+	var newTarget = target.slice();
+	console.log('sliced ', newTarget, Array.isArray(newTarget));
+	newTarget.pop();
+	delete target.dog;
+	console.log('delete dog ', target);
+	target.push('koo', 'boo', 'loo');
+	console.log('koo: ', target, Array.isArray(target));
+	target.pop();
+	console.log('pop: ', target, typeof target);
+	target.setListener(el);
+
+
+})
+	
+</script>
+</head>
+<body>
+	<div id="container" style="background-color: red; min-height: 100px;"></div>
+</body>
